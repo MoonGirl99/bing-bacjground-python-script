@@ -1,0 +1,59 @@
+# Download and save Bing daily wallpaper to the specified location
+
+import time
+import os
+import urllib.request
+import requests
+global filepath
+# Save the picture to the disk folder dirname
+
+
+def save_img(img_url, dirname):
+    global filepath
+    try:
+        # Create the folder if it doesn't exist
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        # Name the image file name with the date, including the suffix
+        basename = time.strftime("%Y-%m-%d", time.localtime()) + ".jpg"
+        # Stitch the directory and file name to get the image path
+        filepath = "/home/mitra/t25_project/bing-pictures/" + basename + ".jpg"
+        # Download the picture and save it in a folder
+        urllib.request.urlretrieve(img_url, filepath)
+    except IOError as e:
+        print('Error: File operation failed', e, '\n')
+    except Exception as e:
+        print('Error:', e, '\n')
+    else:
+        print("Save", filepath, "success!", '\n')
+
+    return filepath
+
+# Request webpage, jump to the final img address
+
+
+def get_img_url(raw_img_url="https://www.bing.com/th?id=OHR.RoccaCalascio_DE-DE9842210237_1920x1080.jpg&rf=LaDigue_1920x1080.jpg"):
+    try:
+        # Get the URL of the image file
+        r = requests.get(raw_img_url)
+        img_url = r.url
+    except Exception as e:
+        print('Error:', e, '\n')
+        return False
+    else:
+        return img_url
+
+
+def main():
+    global filepath
+    dirname = "bing-pictures"              # The location where the picture will be saved
+    print("The wallpaper will be saved in:", dirname, '\n')
+
+    img_url = get_img_url()
+    if img_url != False:
+        print('The picture address is:', img_url, '\n')
+        filepath = save_img(img_url, dirname)   # The path of the picture file
+    os.system("gsettings set org.gnome.desktop.background picture-uri file:///" + filepath)
+
+
+main()
