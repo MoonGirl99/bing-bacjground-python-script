@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# Original Source:
+# http://ubuntuforums.org/showthread.php?t=2074098
+# http://stackoverflow.com/questions/10639914/is-there-a-way-to-get-bings-photo-of-the-day/13057735#13057735
+#
+# Updates:
+# - 2014-05-28: Jeremie Miserez <jeremie@miserez.org>
+#               - Changed xmlURL to use the same feed as the official Bing Desktop app
+#               - Added extraction and stamping of copyright information onto the 
+#                 image. Note that this is usually the image description plus the name
+#                 of the photographer/copyright info.
+#               - NOTE: this script now requires ImageMagick and readlink to be 
+#                       installed as well as a font Segoe UI Italic "segoeuii.ttf" to reside in the 
+#                       same directory as this script.
+#               - The 1920x1200 version of the image with annotations is also generated hourly at
+#                 https://miserez.org/bingdailywallpaper.jpg for reference.
+#
+
+# $saveDir is used to set the location where Bing pics of the day
+# are stored.  $HOME holds the path of the current user's home directory
+saveDir=$HOME'/t25_project/bing-pictures/'
+
+# Get this script's path. This method works very well, but relies on readlink to be installed
+SCRIPT=$(readlink -f $0)
+SCRIPTPATH=`dirname $SCRIPT`
+
+
+# $bing is needed to form the fully qualified URL for
+# the Bing pic of the day
+bing="www.bing.com"
+
+# $xmlURL is needed to get the xml data from which
+# the relative URL for the Bing pic of the day is extracted
+#
+# The mkt parameter determines which Bing market you would like to
+# obtain your images from.
+# Valid values are: en-US, zh-CN, ja-JP, en-AU, en-UK, de-DE, en-NZ, en-CA.
+#
+# The idx parameter determines where to start from. 0 is the current day,
+# 1 the previous day, etc.
+xmlURL="http://www.bing.com/HPImageArchive.aspx?format=xml&idx=0&n=1"
+
+# Create saveDir if it does not already exist
+mkdir -p $saveDir
+
+# Set picture options
+# Valid options are: none,wallpaper,centered,scaled,stretched,zoom,spanned
+picOpts="zoom"
+
+# The desired Bing picture resolution to download
+# Valid options: "_1024x768" "_1280x720" "_1366x768" "_1920x1200"
+desiredPicRes="_1920x1200"
+
+# The file extension for the Bing pic
+picExt=".jpg"
+
+# Extract the relative URL of the Bing pic of the day from
+# the XML data retrieved from xmlURL, form the fully qualified
+# URL for the pic of the day, and store it in $picURL
+
+# Form the URL for the desired pic resolution
+xmlContent=$(curl -s $xmlURL)
+
+desiredPicURL=$bing$(echo $xmlContent | grep -oP "<urlBase>(.*)</urlBase>" | cut -d ">" -f 2 | cut -d "<" -f 1)$desiredPicRes$picExt
+
+# Form the URL for the default pic resolution
+defaultPicURL=$bing$(echo $xmlContent | grep -oP "<url>(.*)</url>" | cut -d ">" -f 2 | cut -d "<" -f 1)
+
+# Extract copyright tag contents, usually contains information about the image in addition to the copyright.
+copyrightInfo=$(echo $xmlContent | grep -o '<copyright>.*</copyright>' | sed 's/\(<copyright>\|<\/copyright>\)//g')
+
+# $picName now contains the filename of the Bing pic of the day
+today=`date '+%Y_%m_%d_S'`;
+filename="/home/el/myfile/$today.ponies"
+echo $filename;
+
+# Attempt to download the desired image resolution. If it doesn't
+# exist then download the default image resolution
+if wget --quiet --spider "$desiredPicURL"
+then
+
+    # Set picName to the desired picName
+    picName=${desiredPicURL##*/}
+    # Download the Bing pic of the day at desired resolution
+    curl --create-dirs -s -o $saveDir$picName $desiredPicURL
+ 
+    # Add copyright information to image (needs ImageMagick and font "calibrii.ttf" in same directory)
+	# Write copyright text
+	copyrightPicName=$picName'_copyright.png'
+	convert -size 1920x50 xc:none -gravity Southeast -fill 'rgba(255,255,255,0.8)' -font $SCRIPTPATH/segoeuii.ttf -pointsize 24 -annotate +0+0 "$copyrightInfo" -trim $saveDir$copyrightPicName
+
+	finalPicName=$picName'_annotated.jpg'
+	# Composite it over the original
+	composite -blend 25 -gravity Southeast -geometry +242+106 $saveDir$copyrightPicName $saveDir$picName $saveDir$finalPicName
+	composite -compose pegtop-light -gravity Southeast -geometry +242+106 $saveDir$copyrightPicName $saveDir$finalPicName $saveDir$finalPicName
+
+	# Remove temporary file
+	rm $saveDir$copyrightPicName
+else
+    # Set picName to the default picName
+    picName=${defaultPicURL##*/}
+    # Download the Bing pic of the day at default resolution
+    curl --create-dirs -s -o $saveDir$picName $defaultPicURL
+fi
+
+# Set the GNOME3 wallpaper
+DISPLAY=:0 GSETTINGS_BACKEND=dconf gsettings set org.gnome.desktop.background picture-uri '"file://'$saveDir$finalPicName'"'
+
+# Set the GNOME 3 wallpaper picture options
+DISPLAY=:0 GSETTINGS_BACKEND=dconf gsettings set org.gnome.desktop.background picture-options $picOpts
+
+# Remove pictures older than 30 days (last modified)
+#find $saveDir -mtime +30 -delete
+
+# Exit the script
+exit
