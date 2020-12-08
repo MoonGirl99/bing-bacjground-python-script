@@ -3,23 +3,13 @@
 # Original Source:
 # http://ubuntuforums.org/showthread.php?t=2074098
 # http://stackoverflow.com/questions/10639914/is-there-a-way-to-get-bings-photo-of-the-day/13057735#13057735
-#
-# Updates:
-# - 2014-05-28: Jeremie Miserez <jeremie@miserez.org>
-#               - Changed xmlURL to use the same feed as the official Bing Desktop app
-#               - Added extraction and stamping of copyright information onto the 
-#                 image. Note that this is usually the image description plus the name
-#                 of the photographer/copyright info.
-#               - NOTE: this script now requires ImageMagick and readlink to be 
-#                       installed as well as a font Segoe UI Italic "segoeuii.ttf" to reside in the 
-#                       same directory as this script.
-#               - The 1920x1200 version of the image with annotations is also generated hourly at
-#                 https://miserez.org/bingdailywallpaper.jpg for reference.
-#
+
+#Updated by Mahshid Ahmadi at 2020.07.12 
+
 
 # $saveDir is used to set the location where Bing pics of the day
 # are stored.  $HOME holds the path of the current user's home directory
-saveDir=$HOME'/t25_project/bing-pictures/'
+saveDir=$HOME'/path/to/img/'
 
 # Get this script's path. This method works very well, but relies on readlink to be installed
 SCRIPT=$(readlink -f $0)
@@ -30,15 +20,6 @@ SCRIPTPATH=`dirname $SCRIPT`
 # the Bing pic of the day
 bing="www.bing.com"
 
-# $xmlURL is needed to get the xml data from which
-# the relative URL for the Bing pic of the day is extracted
-#
-# The mkt parameter determines which Bing market you would like to
-# obtain your images from.
-# Valid values are: en-US, zh-CN, ja-JP, en-AU, en-UK, de-DE, en-NZ, en-CA.
-#
-# The idx parameter determines where to start from. 0 is the current day,
-# 1 the previous day, etc.
 xmlURL="http://www.bing.com/HPImageArchive.aspx?format=xml&idx=0&n=1"
 
 # Create saveDir if it does not already exist
@@ -71,9 +52,7 @@ defaultPicURL=$bing$(echo $xmlContent | grep -oP "<url>(.*)</url>" | cut -d ">" 
 copyrightInfo=$(echo $xmlContent | grep -o '<copyright>.*</copyright>' | sed 's/\(<copyright>\|<\/copyright>\)//g')
 
 # $picName now contains the filename of the Bing pic of the day
-today=`date '+%Y_%m_%d_S'`;
-filename="/home/el/myfile/$today.ponies"
-echo $filename;
+finalPicName=$(date +'%Y-%m-%d')".jpg"
 
 # Attempt to download the desired image resolution. If it doesn't
 # exist then download the default image resolution
@@ -90,7 +69,7 @@ then
 	copyrightPicName=$picName'_copyright.png'
 	convert -size 1920x50 xc:none -gravity Southeast -fill 'rgba(255,255,255,0.8)' -font $SCRIPTPATH/segoeuii.ttf -pointsize 24 -annotate +0+0 "$copyrightInfo" -trim $saveDir$copyrightPicName
 
-	finalPicName=$picName'_annotated.jpg'
+	finalPicName=$(date +'%Y-%m-%d')".jpg"
 	# Composite it over the original
 	composite -blend 25 -gravity Southeast -geometry +242+106 $saveDir$copyrightPicName $saveDir$picName $saveDir$finalPicName
 	composite -compose pegtop-light -gravity Southeast -geometry +242+106 $saveDir$copyrightPicName $saveDir$finalPicName $saveDir$finalPicName
