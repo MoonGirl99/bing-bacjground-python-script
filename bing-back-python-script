@@ -4,6 +4,7 @@ import time
 import os
 import urllib.request
 import requests
+from bs4 import BeautifulSoup
 global filepath
 # Save the picture to the disk folder dirname
 
@@ -30,10 +31,20 @@ def save_img(img_url, dirname):
     return filepath
 
 # Request webpage, jump to the final img address
+# def raw_url():
+#     res = requests.get("https://www.bing.com/")
+#     soup = BeautifulSoup(res.text, "lxml")
+#     for items in soup.select(".img_cont"):
+#         raw_img_url = "https://www.bing.com/" + items['style'].split("url(")[1].split(")")[0]
+#     return (raw_img_url)
 
 
-def get_img_url(raw_img_url="https://www.bing.com/th?id=OHR.RoccaCalascio_DE-DE9842210237_1920x1080.jpg&rf=LaDigue_1920x1080.jpg"):
+def get_img_url():
     try:
+        res = requests.get("https://www.bing.com/")
+        soup = BeautifulSoup(res.text, "lxml")
+        for items in soup.select(".img_cont"):
+            raw_img_url = "https://www.bing.com/" + items['style'].split("url(")[1].split(")")[0]
         # Get the URL of the image file
         r = requests.get(raw_img_url)
         img_url = r.url
@@ -48,7 +59,7 @@ def main():
     global filepath
     dirname = "bing-pictures"              # The location where the picture will be saved
     print("The wallpaper will be saved in:", dirname, '\n')
-
+    # raw_url()
     img_url = get_img_url()
     if img_url != False:
         print('The picture address is:', img_url, '\n')
